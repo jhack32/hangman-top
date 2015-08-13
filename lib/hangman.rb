@@ -2,6 +2,7 @@
 #Player versus the Computer.
 #5desk.txt is the dictionary.
 
+require 'yaml'
 
 class Hangman
   def initialize
@@ -10,6 +11,7 @@ class Hangman
   end
 
   def start
+    puts ""
     puts "Welcome to the Hangman game!"
     puts "You will be playing against the computer!"
     @player.start
@@ -23,31 +25,44 @@ class Player
     @wrong_guesses_left = 1
     @player_correct_guesses = []
     @incorrect_words = []
+    @secret_word = []
   end
 
   def start
-    puts "Please enter your name: "
-    name = gets.chomp
-    puts "Welcome #{name}."
-    Computer.pick_word
-    @turn = 1
-    create_board
-    guess
+    puts ""
+    puts "Would you like to load a game? (yes/no)"
+    player_load_game = gets.chomp.downcase
+    case player_load_game
+      when "yes"
+        load_game
+      when "no"
+        puts "Please enter your name: "
+        name = gets.chomp
+        puts "Welcome #{name}."
+        puts "You may save your game at any time by typing (save)"
+        Computer.pick_word
+        @secret_word = Computer.check_word
+        @turn = 1
+        create_board
+        guess
+    else
+      puts "Please enter a valid input."
+    end
   end
 
   def create_board
     # if @player_correct_guesses.empty?
-        Computer.check_word.length.times { |x| @player_correct_guesses << " _ " }
-        print @player_correct_guesses.to_s + "\n"
+        @secret_word.length.times { |x| @player_correct_guesses << " _ " }
+
   #  end
   end
 
   def guess_scan_answer
-    Computer.check_word.include?@player_guess.to_s
+    @secret_word.include?@player_guess.to_s
   end
 
   def return_index
-    Computer.check_word.each_with_index.map do |x, index|
+    @secret_word.each_with_index.map do |x, index|
       if x == @player_guess
         @player_correct_guesses.delete_at(index)
         @player_correct_guesses.insert(index, @player_guess)
@@ -62,8 +77,8 @@ class Player
       #@player_correct_guesses << @player_guess
       return_index
       puts ""
-      p @player_correct_guesses #check
-      p @player_guess#check
+      #p @player_correct_guesses #check
+      #p @player_guess#check
       check_win
     else
       check_lose
@@ -74,8 +89,8 @@ class Player
       puts "The incorrect words you have used are: #{@incorrect_words}"
       puts ""
       @wrong_guesses_left += 1
-      p @player_correct_guesses#check
-      p @player_guess#check
+      #p @player_correct_guesses#check
+      #p @player_guess#check
       guess
     end
   end
@@ -83,7 +98,6 @@ class Player
   def check_lose
     if @wrong_guesses_left == 7
       puts "Sorry! You ran out of guesses! You LOSE! :("
-      puts ""
       @player_correct_guesses = Array.new
       play_again
     end
@@ -93,6 +107,7 @@ class Player
     puts "Would you like to play again (yes/no)"
     rematch = gets.chomp.downcase
     if rematch == "yes"
+      @player_correct_guesses = []
       start
     elsif rematch == "no"
       puts "Okay! Maybe next time! Goodbye!"
@@ -104,8 +119,11 @@ class Player
   end
 
   def check_win
-    if @player_correct_guesses == Computer.check_word
+    if @player_correct_guesses == @secret_word
       puts "You WIN! You guessed it correctly!"
+      puts ""
+      puts "The word was..... "
+      print "#{@secret_word.join}\n"
       play_again
     else
       guess
@@ -114,12 +132,55 @@ class Player
 
   def guess
     puts ""
+    puts "Your current board:"
+    puts "#{@player_correct_guesses.join(" ")}"
+    puts "Incorrect words: #{@incorrect_words}"
     puts "Turn ##{@turn}"
     print "Please enter a letter: "
+
     @player_guess = gets.chomp.downcase
     @turn += 1
-    guess_check
+      if @player_guess == "save"
+        save_game
+      else
+      guess_check
+    end
   end #End of guess method
+
+
+  def save_game
+    #yaml = YAML::dump(self)
+    puts "Please enter a filename for the saved game."
+    save_file_name = gets.chomp.downcase
+    save_file = File.write("saved_games/#{save_file_name}.yaml", self.to_yaml)
+    #save_file.write(yaml)
+    puts "Your game has been saved!"
+    puts "Goodbye!"
+  end
+
+
+  def load_game
+  saved_games = check_files
+  puts "Please input the FILENAME for the saved game."
+  load_file_name = gets.chomp.downcase
+  yaml = "saved_games/#{load_file_name}.yaml"
+    if saved_games.include?(yaml)
+      YAML.load_file(yaml).guess
+    else
+      puts "Sorry, this file does not exist!"
+      start
+    end
+  end
+
+  def check_files
+    saved_games = Dir.glob("saved_games/*")
+    if saved_games.empty?
+      puts "There are no saved files."
+      start
+    end
+    puts "Your saved games are: #{saved_games}"
+    saved_games
+  end
 
 end #End of Player class
 
@@ -127,6 +188,7 @@ end #End of Player class
 class Computer
   attr_reader :secret_word
   def initialize
+    @secret_word = secret_word
   end
 
   def self.pick_word
@@ -139,12 +201,17 @@ class Computer
     @secret_word = File.readlines("5desk.txt").sample.chomp
     break if @secret_word.length > 5 && @secret_word.length < 12
     end  #until @secret_word.length > 5 && @secret_word.length < 12
-    print @secret_word + " The length of the word is: #{@secret_word.to_s.length}\n" #Delete this after finished project.
+    #puts @secret_word #displays the answer
+    print "The length of the word is: #{@secret_word.to_s.length}\n" #Delete this after finished project.
   end #End of pick_word
 
 
   def self.check_word
-    @secret_word.downcase.split(//)
+    #  if @secret_word.nil?
+    #    YAML.load_file(show_file_yaml)
+    #  else
+      @secret_word.downcase.split(//)
+  #  end
   end
 
 end #End of Computer Class
